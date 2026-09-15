@@ -3,19 +3,14 @@ import re
 
 
 class Applicant:
-    """Класс, представляющий соискателя работы."""
+    """Класс, представляющий соискателя работы (полная версия данных)."""
 
     def __init__(self, *args, **kwargs):
-        # --- Вариант 1: один аргумент - строка (обычная строка или JSON-строка) ---
         if len(args) == 1 and isinstance(args[0], str):
             data = self._parse_string_or_json(args[0])
             self._init_from_dict(data)
-
-        # --- Вариант 2: один аргумент - словарь (например, уже распарсенный JSON) ---
         elif len(args) == 1 and isinstance(args[0], dict):
             self._init_from_dict(args[0])
-
-        # --- Вариант 3: обычные позиционные/именованные аргументы полей ---
         else:
             self._init_from_fields(*args, **kwargs)
 
@@ -23,7 +18,6 @@ class Applicant:
 
     @staticmethod
     def _parse_string_or_json(text: str) -> dict:
-        """Пытаемся разобрать как JSON, если не получилось - как строку с разделителем ';'."""
         try:
             return json.loads(text)
         except json.JSONDecodeError:
@@ -105,12 +99,6 @@ class Applicant:
 
     @staticmethod
     def _validate_phone(value):
-        """
-        Проверка номера телефона.
-        Допустимые форматы: +79991234567, 89991234567, +7 999 123-45-67 и т.п.
-        После очистки от пробелов/скобок/дефисов должно остаться 11 цифр,
-        начинающихся на 7 или 8 (либо получено через +7...).
-        """
         Applicant._validate_non_empty_string(value, "phone_number")
         cleaned = re.sub(r"[\s\-()]", "", value)
         if not re.fullmatch(r"(\+7|8|7)\d{10}", cleaned):
@@ -202,7 +190,6 @@ class Applicant:
     # ------------------- вывод и сравнение -------------------
 
     def full_info(self) -> str:
-        """Полная версия информации об объекте."""
         return (
             f"Соискатель #{self._applicant_id}: "
             f"{self._last_name} {self._first_name} {self._patronymic}, "
@@ -213,16 +200,13 @@ class Applicant:
         )
 
     def short_info(self) -> str:
-        """Краткая версия информации об объекте (Фамилия И.О., профессия, телефон)."""
         initials = f"{self._first_name[0]}.{self._patronymic[0]}."
         return f"{self._last_name} {initials}, {self._profession}, {self._phone_number}"
 
     def __str__(self) -> str:
-        """Строковое представление - полная версия."""
         return self.full_info()
 
     def __repr__(self) -> str:
-        """Техническое представление для отладки."""
         return (
             f"Applicant(applicant_id={self._applicant_id!r}, "
             f"last_name={self._last_name!r}, first_name={self._first_name!r}, "
@@ -232,7 +216,6 @@ class Applicant:
         )
 
     def __eq__(self, other) -> bool:
-        """Два объекта равны, если равны все их содержательные поля."""
         if not isinstance(other, Applicant):
             return NotImplemented
         return (
@@ -244,4 +227,114 @@ class Applicant:
             and self._profession == other._profession
             and self._phone_number == other._phone_number
             and self._extra_info == other._extra_info
+        )
+
+
+class ApplicantShort:
+    """Класс с краткой версией данных соискателя:
+    Фамилия И.О., профессия и один контакт (телефон)."""
+
+    def __init__(self, applicant_id, last_name, first_name, patronymic,
+                 profession, phone_number):
+        Applicant._validate_id(applicant_id)
+        Applicant._validate_name(last_name, "last_name")
+        Applicant._validate_name(first_name, "first_name")
+        Applicant._validate_name(patronymic, "patronymic")
+        Applicant._validate_non_empty_string(profession, "profession")
+        Applicant._validate_phone(phone_number)
+
+        self._applicant_id = applicant_id
+        self._last_name = last_name
+        self._first_name = first_name
+        self._patronymic = patronymic
+        self._profession = profession
+        self._phone_number = phone_number
+
+    # ------------------- applicant_id -------------------
+    @property
+    def applicant_id(self):
+        return self._applicant_id
+
+    @applicant_id.setter
+    def applicant_id(self, value):
+        Applicant._validate_id(value)
+        self._applicant_id = value
+
+    # ------------------- last_name -------------------
+    @property
+    def last_name(self):
+        return self._last_name
+
+    @last_name.setter
+    def last_name(self, value):
+        Applicant._validate_name(value, "last_name")
+        self._last_name = value
+
+    # ------------------- first_name -------------------
+    @property
+    def first_name(self):
+        return self._first_name
+
+    @first_name.setter
+    def first_name(self, value):
+        Applicant._validate_name(value, "first_name")
+        self._first_name = value
+
+    # ------------------- patronymic -------------------
+    @property
+    def patronymic(self):
+        return self._patronymic
+
+    @patronymic.setter
+    def patronymic(self, value):
+        Applicant._validate_name(value, "patronymic")
+        self._patronymic = value
+
+    # ------------------- profession -------------------
+    @property
+    def profession(self):
+        return self._profession
+
+    @profession.setter
+    def profession(self, value):
+        Applicant._validate_non_empty_string(value, "profession")
+        self._profession = value
+
+    # ------------------- phone_number -------------------
+    @property
+    def phone_number(self):
+        return self._phone_number
+
+    @phone_number.setter
+    def phone_number(self, value):
+        Applicant._validate_phone(value)
+        self._phone_number = value
+
+    # ------------------- вывод и сравнение -------------------
+
+    def short_info(self) -> str:
+        initials = f"{self._first_name[0]}.{self._patronymic[0]}."
+        return f"{self._last_name} {initials}, {self._profession}, {self._phone_number}"
+
+    def __str__(self) -> str:
+        return self.short_info()
+
+    def __repr__(self) -> str:
+        return (
+            f"ApplicantShort(applicant_id={self._applicant_id!r}, "
+            f"last_name={self._last_name!r}, first_name={self._first_name!r}, "
+            f"patronymic={self._patronymic!r}, profession={self._profession!r}, "
+            f"phone_number={self._phone_number!r})"
+        )
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, ApplicantShort):
+            return NotImplemented
+        return (
+            self._applicant_id == other._applicant_id
+            and self._last_name == other._last_name
+            and self._first_name == other._first_name
+            and self._patronymic == other._patronymic
+            and self._profession == other._profession
+            and self._phone_number == other._phone_number
         )
