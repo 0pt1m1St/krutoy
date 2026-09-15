@@ -21,6 +21,7 @@ erDiagram
         string qualification
         string profession
         string extra_info
+        string phone
     }
     DEAL {
         int deal_id PK
@@ -55,6 +56,7 @@ erDiagram
 | qualification | VARCHAR | |
 | profession | VARCHAR | |
 | extra_info | TEXT | |
+| phone | VARCHAR | |
 
 ### Deal (Сделка / Документ трудоустройства)
 | Поле | Тип | Ключ |
@@ -75,9 +77,9 @@ erDiagram
 | Сущность | Кол-во содержательных полей | Независимая? |
 |---|---|---|
 | Employer | 4 | Да |
-| **Applicant** | **6** | **Да** |
+| **Applicant** | **7** | **Да** |
 | Deal | 5 | Нет (зависит от Employer и Applicant) |
 
-**Вывод:** выбрана сущность **Applicant (Соискатель)** — она независима и имеет наибольшее число полей (6) среди независимых сущностей.
+**Вывод:** выбрана сущность **Applicant (Соискатель)** — она независима и имеет наибольшее число полей (7) среди независимых сущностей.
 
 Начиная с этого пункта и до конца ЛР4 работа ведётся только с сущностью **Applicant**.
