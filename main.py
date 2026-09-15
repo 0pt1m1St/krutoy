@@ -1,4 +1,5 @@
 import json
+import re
 
 
 class Applicant:
@@ -27,10 +28,10 @@ class Applicant:
             return json.loads(text)
         except json.JSONDecodeError:
             parts = [p.strip() for p in text.split(";")]
-            if len(parts) < 6:
+            if len(parts) < 7:
                 raise ValueError(
-                    "Строка должна содержать минимум 6 полей через ';': "
-                    "id;фамилия;имя;отчество;квалификация;профессия[;доп.инфо]"
+                    "Строка должна содержать минимум 7 полей через ';': "
+                    "id;фамилия;имя;отчество;квалификация;профессия;телефон[;доп.инфо]"
                 )
             return {
                 "applicant_id": int(parts[0]),
@@ -39,7 +40,8 @@ class Applicant:
                 "patronymic": parts[3],
                 "qualification": parts[4],
                 "profession": parts[5],
-                "extra_info": parts[6] if len(parts) > 6 else "",
+                "phone_number": parts[6],
+                "extra_info": parts[7] if len(parts) > 7 else "",
             }
 
     def _init_from_dict(self, data: dict):
@@ -51,19 +53,21 @@ class Applicant:
                 patronymic=data["patronymic"],
                 qualification=data["qualification"],
                 profession=data["profession"],
+                phone_number=data["phone_number"],
                 extra_info=data.get("extra_info", ""),
             )
         except KeyError as e:
             raise ValueError(f"Отсутствует обязательное поле: {e}")
 
     def _init_from_fields(self, applicant_id, last_name, first_name, patronymic,
-                           qualification, profession, extra_info=""):
+                           qualification, profession, phone_number, extra_info=""):
         Applicant._validate_id(applicant_id)
         Applicant._validate_name(last_name, "last_name")
         Applicant._validate_name(first_name, "first_name")
         Applicant._validate_name(patronymic, "patronymic")
         Applicant._validate_non_empty_string(qualification, "qualification")
         Applicant._validate_non_empty_string(profession, "profession")
+        Applicant._validate_phone(phone_number)
         Applicant._validate_string(extra_info, "extra_info")
 
         self._applicant_id = applicant_id
@@ -72,6 +76,7 @@ class Applicant:
         self._patronymic = patronymic
         self._qualification = qualification
         self._profession = profession
+        self._phone_number = phone_number
         self._extra_info = extra_info
 
     # ------------------- статические методы валидации -------------------
@@ -97,6 +102,22 @@ class Applicant:
         Applicant._validate_non_empty_string(value, field_name)
         if not all(ch.isalpha() or ch in "- " for ch in value):
             raise ValueError(f"{field_name} должно содержать только буквы, пробел или дефис")
+
+    @staticmethod
+    def _validate_phone(value):
+        """
+        Проверка номера телефона.
+        Допустимые форматы: +79991234567, 89991234567, +7 999 123-45-67 и т.п.
+        После очистки от пробелов/скобок/дефисов должно остаться 11 цифр,
+        начинающихся на 7 или 8 (либо получено через +7...).
+        """
+        Applicant._validate_non_empty_string(value, "phone_number")
+        cleaned = re.sub(r"[\s\-()]", "", value)
+        if not re.fullmatch(r"(\+7|8|7)\d{10}", cleaned):
+            raise ValueError(
+                "phone_number должен быть в формате +7XXXXXXXXXX или 8XXXXXXXXXX "
+                "(10 цифр после кода страны/8)"
+            )
 
     # ------------------- applicant_id -------------------
     @property
@@ -158,6 +179,16 @@ class Applicant:
         Applicant._validate_non_empty_string(value, "profession")
         self._profession = value
 
+    # ------------------- phone_number -------------------
+    @property
+    def phone_number(self):
+        return self._phone_number
+
+    @phone_number.setter
+    def phone_number(self, value):
+        Applicant._validate_phone(value)
+        self._phone_number = value
+
     # ------------------- extra_info -------------------
     @property
     def extra_info(self):
@@ -167,3 +198,50 @@ class Applicant:
     def extra_info(self, value):
         Applicant._validate_string(value, "extra_info")
         self._extra_info = value
+
+    # ------------------- вывод и сравнение -------------------
+
+    def full_info(self) -> str:
+        """Полная версия информации об объекте."""
+        return (
+            f"Соискатель #{self._applicant_id}: "
+            f"{self._last_name} {self._first_name} {self._patronymic}, "
+            f"квалификация: {self._qualification}, "
+            f"профессия: {self._profession}, "
+            f"телефон: {self._phone_number}, "
+            f"доп. информация: {self._extra_info or '-'}"
+        )
+
+    def short_info(self) -> str:
+        """Краткая версия информации об объекте (Фамилия И.О., профессия, телефон)."""
+        initials = f"{self._first_name[0]}.{self._patronymic[0]}."
+        return f"{self._last_name} {initials}, {self._profession}, {self._phone_number}"
+
+    def __str__(self) -> str:
+        """Строковое представление - полная версия."""
+        return self.full_info()
+
+    def __repr__(self) -> str:
+        """Техническое представление для отладки."""
+        return (
+            f"Applicant(applicant_id={self._applicant_id!r}, "
+            f"last_name={self._last_name!r}, first_name={self._first_name!r}, "
+            f"patronymic={self._patronymic!r}, qualification={self._qualification!r}, "
+            f"profession={self._profession!r}, phone_number={self._phone_number!r}, "
+            f"extra_info={self._extra_info!r})"
+        )
+
+    def __eq__(self, other) -> bool:
+        """Два объекта равны, если равны все их содержательные поля."""
+        if not isinstance(other, Applicant):
+            return NotImplemented
+        return (
+            self._applicant_id == other._applicant_id
+            and self._last_name == other._last_name
+            and self._first_name == other._first_name
+            and self._patronymic == other._patronymic
+            and self._qualification == other._qualification
+            and self._profession == other._profession
+            and self._phone_number == other._phone_number
+            and self._extra_info == other._extra_info
+        )
