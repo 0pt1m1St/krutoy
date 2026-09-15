@@ -1,8 +1,63 @@
+import json
+
+
 class Applicant:
     """Класс, представляющий соискателя работы."""
 
-    def __init__(self, applicant_id, last_name, first_name, patronymic,
-                 qualification, profession, extra_info=""):
+    def __init__(self, *args, **kwargs):
+        # --- Вариант 1: один аргумент - строка (обычная строка или JSON-строка) ---
+        if len(args) == 1 and isinstance(args[0], str):
+            data = self._parse_string_or_json(args[0])
+            self._init_from_dict(data)
+
+        # --- Вариант 2: один аргумент - словарь (например, уже распарсенный JSON) ---
+        elif len(args) == 1 and isinstance(args[0], dict):
+            self._init_from_dict(args[0])
+
+        # --- Вариант 3: обычные позиционные/именованные аргументы полей ---
+        else:
+            self._init_from_fields(*args, **kwargs)
+
+    # ------------------- разбор входных данных -------------------
+
+    @staticmethod
+    def _parse_string_or_json(text: str) -> dict:
+        """Пытаемся разобрать как JSON, если не получилось - как строку с разделителем ';'."""
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            parts = [p.strip() for p in text.split(";")]
+            if len(parts) < 6:
+                raise ValueError(
+                    "Строка должна содержать минимум 6 полей через ';': "
+                    "id;фамилия;имя;отчество;квалификация;профессия[;доп.инфо]"
+                )
+            return {
+                "applicant_id": int(parts[0]),
+                "last_name": parts[1],
+                "first_name": parts[2],
+                "patronymic": parts[3],
+                "qualification": parts[4],
+                "profession": parts[5],
+                "extra_info": parts[6] if len(parts) > 6 else "",
+            }
+
+    def _init_from_dict(self, data: dict):
+        try:
+            self._init_from_fields(
+                applicant_id=data["applicant_id"],
+                last_name=data["last_name"],
+                first_name=data["first_name"],
+                patronymic=data["patronymic"],
+                qualification=data["qualification"],
+                profession=data["profession"],
+                extra_info=data.get("extra_info", ""),
+            )
+        except KeyError as e:
+            raise ValueError(f"Отсутствует обязательное поле: {e}")
+
+    def _init_from_fields(self, applicant_id, last_name, first_name, patronymic,
+                           qualification, profession, extra_info=""):
         Applicant._validate_id(applicant_id)
         Applicant._validate_name(last_name, "last_name")
         Applicant._validate_name(first_name, "first_name")
@@ -28,20 +83,17 @@ class Applicant:
 
     @staticmethod
     def _validate_string(value, field_name):
-        """Базовая проверка: значение должно быть строкой."""
         if not isinstance(value, str):
             raise ValueError(f"{field_name} должно быть строкой")
 
     @staticmethod
     def _validate_non_empty_string(value, field_name):
-        """Проверка: значение — непустая строка (переиспользует _validate_string)."""
         Applicant._validate_string(value, field_name)
         if not value.strip():
             raise ValueError(f"{field_name} должно быть непустой строкой")
 
     @staticmethod
     def _validate_name(value, field_name):
-        """Проверка ФИО: непустая строка из букв, пробелов и дефисов."""
         Applicant._validate_non_empty_string(value, field_name)
         if not all(ch.isalpha() or ch in "- " for ch in value):
             raise ValueError(f"{field_name} должно содержать только буквы, пробел или дефис")
