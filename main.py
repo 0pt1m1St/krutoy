@@ -7,9 +7,9 @@ class Applicant:
         Applicant._validate_name(last_name, "last_name")
         Applicant._validate_name(first_name, "first_name")
         Applicant._validate_name(patronymic, "patronymic")
-        Applicant._validate_qualification(qualification)
-        Applicant._validate_profession(profession)
-        Applicant._validate_extra_info(extra_info)
+        Applicant._validate_non_empty_string(qualification, "qualification")
+        Applicant._validate_non_empty_string(profession, "profession")
+        Applicant._validate_string(extra_info, "extra_info")
 
         self._applicant_id = applicant_id
         self._last_name = last_name
@@ -27,26 +27,24 @@ class Applicant:
             raise ValueError("applicant_id должен быть положительным целым числом")
 
     @staticmethod
-    def _validate_name(value, field_name):
-        if not isinstance(value, str) or not value.strip():
+    def _validate_string(value, field_name):
+        """Базовая проверка: значение должно быть строкой."""
+        if not isinstance(value, str):
+            raise ValueError(f"{field_name} должно быть строкой")
+
+    @staticmethod
+    def _validate_non_empty_string(value, field_name):
+        """Проверка: значение — непустая строка (переиспользует _validate_string)."""
+        Applicant._validate_string(value, field_name)
+        if not value.strip():
             raise ValueError(f"{field_name} должно быть непустой строкой")
+
+    @staticmethod
+    def _validate_name(value, field_name):
+        """Проверка ФИО: непустая строка из букв, пробелов и дефисов."""
+        Applicant._validate_non_empty_string(value, field_name)
         if not all(ch.isalpha() or ch in "- " for ch in value):
             raise ValueError(f"{field_name} должно содержать только буквы, пробел или дефис")
-
-    @staticmethod
-    def _validate_qualification(value):
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError("qualification должно быть непустой строкой")
-
-    @staticmethod
-    def _validate_profession(value):
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError("profession должно быть непустой строкой")
-
-    @staticmethod
-    def _validate_extra_info(value):
-        if not isinstance(value, str):
-            raise ValueError("extra_info должно быть строкой")
 
     # ------------------- applicant_id -------------------
     @property
@@ -95,7 +93,7 @@ class Applicant:
 
     @qualification.setter
     def qualification(self, value):
-        Applicant._validate_qualification(value)
+        Applicant._validate_non_empty_string(value, "qualification")
         self._qualification = value
 
     # ------------------- profession -------------------
@@ -105,7 +103,7 @@ class Applicant:
 
     @profession.setter
     def profession(self, value):
-        Applicant._validate_profession(value)
+        Applicant._validate_non_empty_string(value, "profession")
         self._profession = value
 
     # ------------------- extra_info -------------------
@@ -115,5 +113,5 @@ class Applicant:
 
     @extra_info.setter
     def extra_info(self, value):
-        Applicant._validate_extra_info(value)
+        Applicant._validate_string(value, "extra_info")
         self._extra_info = value
